@@ -101,7 +101,17 @@ class BaseColl:
             if response.status_code == 200: break
             i += 1
             sleep(0.1)
-        #if response.status_code != 200: raise Exception(response.json())
+        
+        if response.status_code != 200:
+            raise Exception("""
+            Exceeded request limits ({max_requests})
+            Request status code: {status_code}
+            Message: {body}
+            """.format(
+                max_requests=self.max_requests,
+                status_code=response.status_code,
+                body=response.text,
+            ))
             
         return response
     
