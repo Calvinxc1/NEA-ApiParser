@@ -3,11 +3,11 @@ from multiprocessing import Process, SimpleQueue
 from multiprocessing.dummy import Pool
 from time import sleep
 
-from nea_esiParser.collectors import StatusColl
+from nea_esiParser.collectors import StatusColl, JumpsColl
 
 class Spawner:
     collectors = [
-        StatusColl
+        StatusColl, JumpsColl
     ]
     
     def __init__(self, sql_params, max_threads=12, sleep_interval=1, verbose=False):

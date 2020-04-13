@@ -1,4 +1,4 @@
-#from .JumpsColl import JumpsColl
+from .JumpsColl import JumpsColl
 #from .KillsColl import KillsColl
 #from .MarketHistColl import MarketHistColl
 #from .OrdersColl import OrdersColl
