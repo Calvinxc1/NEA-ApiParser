@@ -1,9 +1,10 @@
 from multiprocessing.dummy import Pool
 
 from .BaseColl import BaseColl
-from nea_esiParser.schema import Order, Region
+from nea_schema.esi.mkt import Order
+from nea_schema.sde.map import Region
 
-class OrdersColl(BaseColl):
+class OrderColl(BaseColl):
     endpoint_path = 'markets/{region_id}/orders'
     defaults = {
         'query_params': {
@@ -14,7 +15,7 @@ class OrdersColl(BaseColl):
     schema = Order
     
     def build_responses(self):
-        Session, conn = self.build_session(self.engine)
+        Session, conn = self._build_session(self.engine)
         params = [
             {
                 'path': self.full_path,
@@ -23,7 +24,7 @@ class OrdersColl(BaseColl):
             for region_id in conn.query(Region.region_id)
         ]
         
-        response_sets = self.process(self.get_responses, params)
+        response_sets = self._process(self._get_responses, params)
         
         cache_expire = response_sets[0][1]
         responses = [

@@ -39,7 +39,7 @@ class BaseColl:
     def _build_session(engine):
         Session = sessionmaker(bind=engine)
         conn = Session()
-        #conn.execute('SET SESSION foreign_key_checks=0;')
+        conn.execute('SET SESSION foreign_key_checks=0;')
         return Session, conn
     
     def _process(self, func, kwargs):
@@ -85,7 +85,7 @@ class BaseColl:
                 for page in range(2, page_count+1)
             ]
             
-            response_items = self.process(self._request, params)
+            response_items = self._process(self._request, params)
             responses.extend(response_items)
             
         return responses, cache_expire
