@@ -1,23 +1,21 @@
-from datetime import datetime as dt
+from datetime import datetime as dt, timedelta as td
 from multiprocessing import Process, SimpleQueue
-from multiprocessing.dummy import Pool
 from time import sleep
 
-from nea_esiParser.collectors import StatusColl, JumpsColl, KillsColl, PricesColl, OrderColl
+from nea_esiParser.collectors import StatusColl, JumpsColl, KillsColl, PricesColl, OrderColl, MarketHistColl
 
 class Spawner:
     collectors = [
-        StatusColl, JumpsColl, KillsColl, PricesColl,
+        StatusColl, JumpsColl, KillsColl, PricesColl, MarketHistColl
     ]
     
-    def __init__(self, sql_params, max_threads=12, sleep_interval=1, verbose=False):
+    def __init__(self, sql_params, sleep_interval=1, verbose=False):
         self.sql_params = sql_params
-        self.max_threads = max_threads
         self.sleep_interval = sleep_interval
         self.verbose = verbose
         
         self.enabled = True
-        self.expires = {coll:dt.now() for coll in self.collectors}
+        self.expires = {coll:dt.utcnow() for coll in self.collectors}
         self.processes = {}
         self.queue = SimpleQueue()
     
@@ -30,7 +28,7 @@ class Spawner:
             sleep(self.sleep_interval)
         
     def _build_active_procs(self):
-        curr_time = dt.now()
+        curr_time = dt.utcnow()
         active_procs = []
         for proc, expire in list(self.expires.items()):
             if (curr_time - expire).total_seconds() > 0:
@@ -40,23 +38,15 @@ class Spawner:
         return active_procs
             
     def _spawn_next_procs(self, active_procs):
-        new_process = Process(target=self._run_active_procs, args=(active_procs,), daemon=True)
-        new_process.start()
-        self.processes[new_process.pid] = new_process
-        
-    def _run_active_procs(self, active_procs):
-        with Pool(self.max_threads) as P:
-            expires = {
-                coll: P.apply(self._run_proc, (coll, self.sql_params, self.verbose))
-                for coll in active_procs
-            }
+        for coll in active_procs:
+            process = Process(target=self._run_coll, args=(coll,))
+            process.start()
+            self.processes[process.pid] = process            
             
-        self.queue.put(expires)
-        
-    @staticmethod
-    def _run_proc(coll, sql_params, verbose):
-        cache_expire = coll(sql_params, verbose).pull_and_load()
-        return cache_expire
+    def _run_coll(self, coll):
+        cache_expire = coll(self.sql_params, self.verbose).pull_and_load()
+        if cache_expire is None: cache_expire = dt.utcnow() + td(minutes=1)
+        self.queue.put({coll: cache_expire})
     
     def _purge_old_proc(self):
         for pid in list(self.processes.keys()):

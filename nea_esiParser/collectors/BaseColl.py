@@ -9,9 +9,7 @@ from tqdm.notebook import tqdm
 class BaseColl:
     root_url = 'https://esi.evetech.net/latest'
     endpoint_path = ''
-    defaults = {
-        'query_params': {'datasource': 'tranquility'},
-    }
+    defaults = {'query_params': {'datasource': 'tranquility'}}
     schema = None
     max_requests = 10
     pool_workers = 12
@@ -21,8 +19,10 @@ class BaseColl:
         self.path_params = {**self.defaults.get('path_params', {})}
         self.query_params = {**self.defaults.get('query_params', {})}
         self.session = rq.Session()
-        self.engine = self._load_engine(sql_params)
+        self.sql_params = sql_params
         self.verbose = verbose
+        
+        self._load_engine()
         
     def pull_and_load(self):
         responses, cache_expire = self.build_responses()
@@ -30,17 +30,18 @@ class BaseColl:
         self.merge_rows(rows)
         return cache_expire
     
-    @staticmethod
-    def _load_engine(sql_params):
-        engine = create_engine('{engine}://{user}:{passwd}@{host}/{db}'.format(**sql_params))
-        return engine
+    def _load_engine(self):
+        self.engine = create_engine('{engine}://{user}:{passwd}@{host}/{db}'.format(**self.sql_params))
     
-    @staticmethod
-    def _build_session(engine):
-        Session = sessionmaker(bind=engine)
-        conn = Session()
-        conn.execute('SET SESSION foreign_key_checks=0;')
-        return Session, conn
+    def _build_session(self, engine):
+        while True:
+            try:
+                Session = sessionmaker(bind=engine)
+                conn = Session()
+                conn.execute('SET SESSION foreign_key_checks=0;')
+                return Session, conn
+            except Exception as e:
+                self._load_engine()
     
     def _process(self, func, kwargs):
         proc_inputs = self._build_proc_inputs(func, kwargs)
@@ -68,10 +69,16 @@ class BaseColl:
     
     def build_responses(self):
         responses, cache_expire = self._get_responses(self.full_path)
+        responses = [response for response in responses if response is not None]
         return responses, cache_expire
         
     def _get_responses(self, path, path_params={}, query_params={}):
         responses = [self._request(path, path_params, query_params)]
+        if responses[0] is None:
+            return [], None
+        elif responses[0].status_code != 200:
+            return [], None
+            
         cache_expire = dt.strptime(responses[0].headers.get('expires'), '%a, %d %b %Y %H:%M:%S %Z')
         
         page_count = int(responses[0].headers.get('X-Pages', 1))
@@ -93,25 +100,17 @@ class BaseColl:
     def _request(self, path, path_params={}, query_params={}):
         sleep(0.1)
         i = 0
-        while i < self.max_requests:
-            response = self.session.get(
-                path.format(**{**self.path_params, **path_params}),
-                params={**self.query_params, **query_params},
-            )
-            if response.status_code == 200: break
-            i += 1
-            sleep(0.1)
-        
-        if response.status_code != 200:
-            raise Exception("""
-            Exceeded request limits ({max_requests})
-            Request status code: {status_code}
-            Message: {body}
-            """.format(
-                max_requests=self.max_requests,
-                status_code=response.status_code,
-                body=response.text,
-            ))
+        try:
+            while i < self.max_requests:
+                response = self.session.get(
+                    path.format(**{**self.path_params, **path_params}),
+                    params={**self.query_params, **query_params},
+                )
+                if response.status_code == 200: break
+                i += 1
+                sleep(0.1)
+        except Exception as e:
+            response = None
             
         return response
     
