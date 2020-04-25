@@ -7,7 +7,7 @@ services:
             context: ./
             dockerfile: ./dev.Dockerfile
             args:
-                schema_branch: feature-EsiSchema
+                schema_branch: develop
         container_name: nea-esi-parser
         volumes:
         - ./config/config.py:/srv/app/config/config.py
