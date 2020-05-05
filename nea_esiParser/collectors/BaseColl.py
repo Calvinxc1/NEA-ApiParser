@@ -1,5 +1,6 @@
 from datetime import datetime as dt
 from multiprocessing.dummy import Pool
+import pymongo as pm
 import requests as rq
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -13,16 +14,36 @@ class BaseColl:
     schema = None
     max_requests = 10
     pool_workers = 12
+    mongo_path = {
+        'database': 'EveSsoAuth',
+        'collection': 'ActiveAuths',
+    }
+    delete_before_merge = False
     
-    def __init__(self, sql_params, verbose=False):
+    def __init__(self, sql_params, mongo_params, auth_char_id=None, verbose=False):
         self.full_path = '{root}/{path}'.format(root=self.root_url, path=self.endpoint_path)
         self.path_params = {**self.defaults.get('path_params', {})}
         self.query_params = {**self.defaults.get('query_params', {})}
         self.session = rq.Session()
         self.sql_params = sql_params
         self.verbose = verbose
+        if auth_char_id:
+            self.get_auth_token(auth_char_id, mongo_params)
+        else:
+            self.headers = {}
         
         self._load_engine()
+        
+    def get_auth_token(self, auth_char_id, mongo_params):
+        conn = pm.MongoClient(**mongo_params)
+        token = conn[self.mongo_path['database']][self.mongo_path['collection']].find_one(
+            {'_id': auth_char_id},
+            {'_id': 0, 'access_token': 1, 'token_type': 1}
+        )
+        self.headers = {
+            'Authorization': '{token_type} {access_token}'.format(**token),
+        }
+        conn.close()
         
     def pull_and_load(self):
         responses, cache_expire = self.build_responses()
@@ -105,6 +126,7 @@ class BaseColl:
                 response = self.session.get(
                     path.format(**{**self.path_params, **path_params}),
                     params={**self.query_params, **query_params},
+                    headers=self.headers,
                 )
                 if response.status_code == 200: break
                 i += 1
@@ -123,8 +145,16 @@ class BaseColl:
         return alchemy_data
     
     def merge_rows(self, rows):
+        if self.delete_before_merge: self._purge_rows()
+        
         Session, conn = self._build_session(self.engine)
         for row in rows:
             conn.merge(row)
+        conn.commit()
+        conn.close()
+        
+    def _purge_rows(self):
+        Session, conn = self._build_session(self.engine)
+        conn.query(self.schema).delete()
         conn.commit()
         conn.close()

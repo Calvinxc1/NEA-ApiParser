@@ -2,17 +2,15 @@ version: '3.7'
 
 services:
     esi:
-        image: nea-esi-parser
+        image: nea-esi_parser
         build:
             context: ./
             dockerfile: ./dev.Dockerfile
             args:
                 schema_branch: develop
-        container_name: nea-esi-parser
+        container_name: nea-esi_parser
         volumes:
         - ./config/config.py:/srv/app/config/config.py
-        #ports:
-        #- 52720:8000
         networks:
         - karan.local.newedenanalytics.net
         restart: unless-stopped
