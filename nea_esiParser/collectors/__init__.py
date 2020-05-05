@@ -1,3 +1,4 @@
+from .CorpBlueprintColl import CorpBlueprintColl
 from .JumpsColl import JumpsColl
 from .KillsColl import KillsColl
 from .MarketHistColl import MarketHistColl

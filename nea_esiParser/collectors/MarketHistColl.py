@@ -3,14 +3,14 @@ from time import sleep
 from tqdm.notebook import tqdm
 
 from .BaseColl import BaseColl
-from nea_schema.esi.mkt import MarketHist
-from nea_schema.sde.map import Region
-from nea_schema.sde.inv import Type
+from nea_schema.maria.esi.mkt import MarketHist
+from nea_schema.maria.sde.map import Region
+from nea_schema.maria.sde.inv import Type
 
 class MarketHistColl(BaseColl):
     endpoint_path = 'markets/{region_id}/history'
     schema = MarketHist
-    days_back = 5
+    days_back = 7
     buffer = 100
     
     def pull_and_load(self):

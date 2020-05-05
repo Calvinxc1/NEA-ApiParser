@@ -18,6 +18,7 @@ setuptools.setup(
     url='https://github.com/Calvinxc1/NEA-EsiParser',
     packages=setuptools.find_packages(),
     install_requires=[
+        'pymongo >= 3.10, < 4',
         'pymysql >= 0.9, < 1',
         'requests >= 2.23, < 3',
         'tqdm >= 4.45.0, < 5',

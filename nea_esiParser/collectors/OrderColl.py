@@ -1,8 +1,8 @@
 from multiprocessing.dummy import Pool
 
 from .BaseColl import BaseColl
-from nea_schema.esi.mkt import Order
-from nea_schema.sde.map import Region
+from nea_schema.maria.esi.mkt import Order
+from nea_schema.maria.sde.map import Region
 
 class OrderColl(BaseColl):
     endpoint_path = 'markets/{region_id}/orders'
