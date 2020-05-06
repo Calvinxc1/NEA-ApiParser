@@ -1,11 +1,13 @@
+from bson.objectid import ObjectId
 from datetime import datetime as dt
 from multiprocessing.dummy import Pool
-import pymongo as pm
 import requests as rq
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from time import sleep
 from tqdm.notebook import tqdm
+
+from nea_schema.mongo import load_datastore, session
 
 class BaseColl:
     root_url = 'https://esi.evetech.net/latest'
@@ -35,15 +37,16 @@ class BaseColl:
         self._load_engine()
         
     def get_auth_token(self, auth_char_id, mongo_params):
-        conn = pm.MongoClient(**mongo_params)
-        token = conn[self.mongo_path['database']][self.mongo_path['collection']].find_one(
-            {'_id': auth_char_id},
-            {'_id': 0, 'access_token': 1, 'token_type': 1}
-        )
+        load_datastore(mongo_params)
+        from nea_schema.mongo.EveSsoAuth import ActiveAuth
+        
+        auth = ActiveAuth.query.get(_id=auth_char_id)
         self.headers = {
-            'Authorization': '{token_type} {access_token}'.format(**token),
+            'Authorization': '{token_type} {access_token}'.format(
+                token_type=auth.token_type,
+                access_token=auth.access_token
+            ),
         }
-        conn.close()
         
     def pull_and_load(self):
         responses, cache_expire = self.build_responses()
