@@ -5,11 +5,14 @@ from time import sleep
 from nea_esiParser.collectors import \
     StatusColl, JumpsColl, KillsColl, \
     PricesColl, OrderColl, MarketHistColl, \
-    CorpBlueprintColl
+    CorpBlueprintColl, StructureColl, \
+    CorpAssetColl
 
 class Spawner:
     collectors = [
-        StatusColl, JumpsColl, KillsColl, PricesColl, MarketHistColl
+        StatusColl, JumpsColl, KillsColl, PricesColl,
+        MarketHistColl, CorpBlueprintColl, StructureColl,
+        CorpAssetColl
     ]
     
     def __init__(self, sql_params, mongo_params, auth_char_id, sleep_interval=1, verbose=False):
