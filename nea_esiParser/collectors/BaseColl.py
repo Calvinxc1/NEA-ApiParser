@@ -14,7 +14,7 @@ class BaseColl:
     endpoint_path = ''
     defaults = {'query_params': {'datasource': 'tranquility'}}
     schema = None
-    max_requests = 10
+    max_request_retries = 8
     pool_workers = 12
     mongo_path = {
         'database': 'EveSsoAuth',
@@ -60,10 +60,10 @@ class BaseColl:
     def _build_session(self, engine):
         while True:
             try:
-                Session = sessionmaker(bind=engine)
-                conn = Session()
+                session = sessionmaker(bind=engine)
+                conn = session()
                 conn.execute('SET SESSION foreign_key_checks=0;')
-                return Session, conn
+                return session, conn
             except Exception as e:
                 self._load_engine()
     
@@ -72,7 +72,6 @@ class BaseColl:
         
         with Pool(self.pool_workers) as P:
             output = P.imap_unordered(self._proc_mapper, proc_inputs)
-            if self.verbose: output = tqdm(output, total=len(proc_inputs), leave=False)
             output = list(output)
         
         return output
@@ -96,12 +95,10 @@ class BaseColl:
         responses = [response for response in responses if response is not None]
         return responses, cache_expire
         
-    def _get_responses(self, path, path_params={}, query_params={}):
-        responses = [self._request(path, path_params, query_params)]
-        if responses[0] is None:
-            return [], None
-        elif responses[0].status_code != 200:
-            return [], None
+    def _get_responses(self, path, path_params={}, query_params={}, json_body=None, method='GET'):
+        responses = [self._request(path, path_params, query_params, json_body, method)]
+        if responses[0] is None: return [], None
+        elif responses[0].status_code != 200: return [], None
             
         cache_expire = dt.strptime(responses[0].headers.get('expires'), '%a, %d %b %Y %H:%M:%S %Z')
         
@@ -111,7 +108,9 @@ class BaseColl:
                 {
                     'path': path,
                     'path_params': {**path_params},
-                    'query_params': {**query_params, 'page': page}
+                    'query_params': {**query_params, 'page': page},
+                    'json_body': json_body,
+                    'method': method,
                 }
                 for page in range(2, page_count+1)
             ]
@@ -121,22 +120,44 @@ class BaseColl:
             
         return responses, cache_expire
     
-    def _request(self, path, path_params={}, query_params={}):
+    def _request(self, path, path_params={}, query_params={}, json_body=None, method='GET'):
         sleep(0.1)
-        i = 0
-        try:
-            while i < self.max_requests:
-                response = self.session.get(
+        
+        response = None
+        for i in range(self.max_request_retries):
+            try:
+                resp = self.session.request(
+                    method,
                     path.format(**{**self.path_params, **path_params}),
                     params={**self.query_params, **query_params},
                     headers=self.headers,
+                    json=json_body,
                 )
-                if response.status_code == 200: break
-                i += 1
-                sleep(0.1)
-        except Exception as e:
-            response = None
-            
+            except RemoteDisconnected as e:
+                if self.verbose: print('RemoteDisconnected error, sleeping for {} seconds and trying again ({}/{})'\
+                                       .format(2**i, i, self.max_request_retries))
+                sleep(2**i)
+                continue
+                
+            if 500 <= resp.status_code < 600:
+                if self.verbose: print('Server error, sleeping for {} seconds and trying again ({}/{})'\
+                                       .format(2**i, i, self.max_request_retries))
+                sleep(2**i)
+                continue
+            elif resp.status_code != 200:
+                if self.verbose:
+                    print('Request error, canceling request.')
+                    print('path', self.endpoint_path)
+                    print('path params:', path_params)
+                    print('query params:', query_params)
+                    print('request body:', json_body)
+                    print('response code:', resp.status_code)
+                    print('response body:', resp.json())
+                    print()
+                break
+            else:
+                response = resp
+        
         return response
     
     def alchemy_responses(self, responses):
