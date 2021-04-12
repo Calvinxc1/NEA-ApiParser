@@ -49,10 +49,13 @@ class MarketHistColl(BaseColl):
         ]   
         
         with Pool(self.pool_workers) as P:
-            region_types = list(tqdm(P.imap_unordered(
-                self._thread_region_types,
-                req_params
-            ), total=len(req_params)))
+            if self.verbose:
+                region_types = list(tqdm(P.imap_unordered(
+                    self._thread_region_types,
+                    req_params,
+                ), total=len(req_params)))
+            else:
+                region_types = P.map(self._thread_region_types,req_params)
             
         region_types = {
             region_id:[

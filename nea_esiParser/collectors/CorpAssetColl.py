@@ -17,8 +17,9 @@ class CorpAssetColl(BaseColl):
     
     def process_names(self):
         name_ids = self._get_name_ids()
-        names = self._request_names(name_ids)
-        self._update_names(names)
+        if len(name_ids) > 0:
+            names = self._request_names(name_ids)
+            self._update_names(names)
     
     def _get_name_ids(self):
         Session, conn = self._build_session(self.engine)
