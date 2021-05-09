@@ -1,8 +1,7 @@
-version: '3.7'
+version: '3'
 
 services:
     esi:
-        image: nea-esi_parser
         build:
             context: ./
             dockerfile: ./dev.Dockerfile

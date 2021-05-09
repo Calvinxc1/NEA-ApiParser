@@ -6,6 +6,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from time import sleep
 from tqdm.notebook import tqdm
+from http.client import RemoteDisconnected
+from requests.exceptions import ConnectionError
 
 from nea_schema.mongo import load_datastore, session
 
@@ -21,6 +23,7 @@ class BaseColl:
         'collection': 'ActiveAuths',
     }
     delete_before_merge = False
+    exception_repeats = (RemoteDisconnected, ConnectionError)
     
     def __init__(self, sql_params, mongo_params, auth_char_id=None, verbose=False):
         self.full_path = '{root}/{path}'.format(root=self.root_url, path=self.endpoint_path)
@@ -133,7 +136,7 @@ class BaseColl:
                     headers=self.headers,
                     json=json_body,
                 )
-            except RemoteDisconnected as e:
+            except self.exception_repeats as e:
                 if self.verbose: print('RemoteDisconnected error, sleeping for {} seconds and trying again ({}/{})'\
                                        .format(2**i, i, self.max_request_retries))
                 sleep(2**i)

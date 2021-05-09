@@ -1,6 +1,8 @@
 from .BaseColl import BaseColl
 from nea_schema.maria.esi.corp import CorpAsset
 from nea_schema.maria.sde.inv import Type, Group, Category
+from nea_schema.maria.esi.uni import Structure
+from nea_schema.maria.sde.map import Station
 from sqlalchemy import and_
 
 class CorpAssetColl(BaseColl):
@@ -13,6 +15,7 @@ class CorpAssetColl(BaseColl):
         rows = self.alchemy_responses(responses)
         self.merge_rows(rows)
         self.process_names()
+        self.process_station_ids()
         return cache_expire
     
     def process_names(self):
@@ -46,3 +49,26 @@ class CorpAssetColl(BaseColl):
             row.item_name = names[row.item_id]
         conn.commit()
         conn.close()
+        
+    def process_station_ids(self):
+        Session, conn = self._build_session(self.engine)
+        station_assets = [
+            *conn.query(CorpAsset).join(Station, CorpAsset.location_id == Station.station_id),
+            *conn.query(CorpAsset).join(Structure, CorpAsset.location_id == Structure.structure_id),
+        ]
+        stationed_assets = [
+            asset_item for station_asset in station_assets
+            for asset_item in self._update_station(station_asset, station_asset.location_id)
+        ]
+        conn.commit()
+        conn.close()
+    
+    def _update_station(self, asset, station_id):
+        asset.station_id = station_id
+        sub_assets = [
+            asset_item for sub_asset in asset.child
+            for asset_item in self._update_station(sub_asset, station_id)
+        ]
+        assets = [asset, *sub_assets]
+        return assets
+        
