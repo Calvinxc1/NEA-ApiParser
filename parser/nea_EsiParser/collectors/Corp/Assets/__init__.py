@@ -1,0 +1,1 @@
+from .CorpAssets import CorpAssets
