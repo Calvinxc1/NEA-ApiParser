@@ -4,6 +4,7 @@ from nea_schema.maria.esi.corp import CorpAsset
 
 from .ExtractorCorpAssetsNames import ExtractorCorpAssetsNames
 from .TransformerCorpAssetsNames import TransformerCorpAssetsNames
+from .LoaderCorpAssetsNames import LoaderCorpAssetsNames
 from ....Base import Base
 
 class CorpAssetsNames(Base):
@@ -11,13 +12,8 @@ class CorpAssetsNames(Base):
     schema = CorpAsset
     Extractor = ExtractorCorpAssetsNames
     Transformer = TransformerCorpAssetsNames
+    Loader = LoaderCorpAssetsNames
     
-    def pull_and_load(self):
-        self.logger.info('Began ETL process')
-        start = dt.now()
-        self.responses = self.Extractor.extract()
-        self.record_items = self.Transformer.transform(self.responses)
-        self.Loader.load(self.record_items)
-        self.subprocess()
-        time = dt.now() - start
-        self.logger.info('ETL complete, elapsed time %s', time)
+    def extract(self):
+        responses = self.Extractor.extract()
+        return responses, None

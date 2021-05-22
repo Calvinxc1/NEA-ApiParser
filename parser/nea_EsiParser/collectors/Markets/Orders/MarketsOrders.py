@@ -4,6 +4,7 @@ from nea_schema.maria.esi.mkt import Order
 
 from ...Base import Base
 from .ExtractorMarketsOrders import ExtractorMarketsOrders
+from .LoaderMarketsOrders import LoaderMarketsOrders
 
 class MarketsOrders(Base):
     endpoint_path = '/markets/{region_id}/orders'
@@ -16,4 +17,8 @@ class MarketsOrders(Base):
     schema = Order
     purge = True
     Extractor = ExtractorMarketsOrders
-    refresh_time_shift = td(minutes=20)
+    Loader = LoaderMarketsOrders
+    refresh_time_shift = td(minutes=15)
+    
+    def load(self, record_items):
+        self.Loader.load(record_items, self.responses)

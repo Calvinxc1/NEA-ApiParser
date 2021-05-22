@@ -1,0 +1,1 @@
+from .UniverseStructuresDetail import UniverseStructuresDetail

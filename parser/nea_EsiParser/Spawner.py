@@ -63,7 +63,7 @@ class Spawner(LoggingBase):
             self.processes[process.name] = process            
             
     def _run_coll(self, coll):
-        cache_expire = coll(self.sql_params, self.Session, self.esi_auth, self.verbose).pull_and_load()
+        cache_expire = coll(self.sql_params, None, self.esi_auth, self.verbose).pull_and_load()
         if cache_expire is None: cache_expire = dt.utcnow() + td(minutes=1)
         self.logger.info('Process %s complete, requeued for %s.', coll.__name__, cache_expire)
         self.queue.put({coll: cache_expire})

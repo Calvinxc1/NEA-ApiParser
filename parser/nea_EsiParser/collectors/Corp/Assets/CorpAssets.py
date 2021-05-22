@@ -10,4 +10,11 @@ class CorpAssets(Base):
     schema = CorpAsset
     purge = True
     Extractor = ExtractorCorp
-    subprocesses = [CorpAssetsNames, CorpAssetsStations]
+    
+    def run_subprocesses(self):
+        if self.record_items:
+            self.subprocesses = [
+                CorpAssetsStations(*self.init_params, parent=self),
+                CorpAssetsNames(*self.init_params, parent=self),
+            ]
+            for subprocess in self.subprocesses: subprocess.pull_and_load()

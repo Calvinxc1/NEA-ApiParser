@@ -19,7 +19,7 @@ class ExtractorCorpAssetsNames(Extractor):
             self.Requester(
                 self.root_url + self.endpoint_path, self.method,
                 item_id_set, self.path_params, self.query_params,
-                self.headers, self.Session,
+                self.headers, None, self.Session,
             ) for item_id_set in item_id_sets
         ]
         self._load_requests(requests)

@@ -1,4 +1,5 @@
 import logging
+from tqdm.auto import tqdm
 
 from ...tools import LoggingBase, maria_connect
 
@@ -11,42 +12,15 @@ class Loader(LoggingBase):
         self.verbose = verbose
         
     def load(self, record_items):
-        self.conn = maria_connect(self.sql_params)
-        
+        self.logger.info('Performing Load on %s records', len(record_items))
+        conn = maria_connect(self.sql_params)
+        t = tqdm(record_items, desc='Loader', leave=False) if self.verbose else record_items
+        for row in t: conn.merge(row)
+        conn.commit()
         if self.purge:
-            self.logger.info('Performing a purge load')
-            self.conn.query(self.schema).delete()
-            insert_records = record_items
-            update_records = []
-        else:
-            self.logger.info('Performing an upsert load')
-            insert_records = filter(self._is_insert_record, record_items)
-            update_records = filter(self._is_update_record, record_items)
-            
-        self.conn.bulk_insert_mappings(self.schema, insert_records)
-        self.conn.bulk_update_mappings(self.schema, update_records)
-        
-        self.conn.commit()
-        self.conn.close()
-        self.logger.info('Load process complete.')
-        
-    def _is_insert_record(self, record_item):
-        existing_record = self._get_existing_record(record_item)
-        insert_record = False if existing_record else True
-        return insert_record
-    
-    def _is_update_record(self, record_item):
-        existing_record = self._get_existing_record(record_item)
-        update_record = True if existing_record else False
-        return update_record
-    
-    def _get_existing_record(self, record_item):
-        primary_keys = [col.name for col in self.schema.__mapper__.primary_key]
-        try:
-            query = {key:record_item[key] for key in primary_keys}
-        except Exception as E:
-            print(primary_keys, record_item)
-            raise E
-        existing_record = self.conn.get(self.schema, query)
-        return existing_record
-            
+            record_times = [record_item.record_time for record_item in record_items]
+            delete_items = conn.query(self.schema).filter(self.schema.record_time.notin_(record_times))
+            self.logger.info('Performing Purge on %s records', delete_items.count())
+        conn.commit()
+        conn.close()
+        self.logger.info('Loading complete')

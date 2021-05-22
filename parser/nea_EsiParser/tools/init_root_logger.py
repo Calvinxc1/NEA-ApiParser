@@ -5,7 +5,11 @@ def init_root_logger(level=logging.WARN):
     logger = logging.getLogger(__name__.split('.')[0])
     logger.setLevel(level)
 
-    formatter = logging.Formatter('%(asctime)s - %(task)s | %(name)s-%(funcName)s\n[%(levelname)s] %(message)s\n----------------')
+    formatter = logging.Formatter(
+        '%(asctime)s - %(task)s | %(name)s-%(funcName)s\n'
+        '[%(levelname)s] %(message)s\n'
+        '----------------'
+    )
 
     info_handler = logging.StreamHandler(stdout)
     info_handler.addFilter(lambda x: x.levelno <= logging.INFO)

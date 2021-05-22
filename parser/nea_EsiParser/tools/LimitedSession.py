@@ -6,7 +6,7 @@ from time import sleep
 from .LoggingBase import LoggingBase
 
 class LimitedSession(LoggingBase):
-    def __init__(self, rate_limit=10, parent=None):
+    def __init__(self, rate_limit=1000, parent=None):
         self._init_logging(parent)
         self.rate_limit = rate_limit
         self.session = rq.Session()
