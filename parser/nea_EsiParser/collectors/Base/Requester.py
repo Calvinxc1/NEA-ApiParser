@@ -23,6 +23,7 @@ class Requester(LoggingBase):
         if etag: self.headers = {**self.headers, 'If-None-Match': etag}
         
         self.followup = self.query_params.get('page', 1) == 1
+        self.response = None
         
     def call(self):
         path = self.path.format(**self.path_params)
@@ -34,12 +35,13 @@ class Requester(LoggingBase):
                 resp = self.Session.request(self.method, path, self.query_params, headers=self.headers, json=self.data)  
                 resp, followups = self.handle_response(resp)
             except self.exception_repeats as E:
-                self.logger.info('Encountered repeatable exception, continuing request\n%s', repr(E))
+                self.logger.debug('Encountered repeatable exception, continuing request\n%s', repr(E))
                 continue
             
         return resp, followups
     
     def handle_response(self, resp):
+        self.response = resp
         if 200 <= resp.status_code < 300:
             pages = int(resp.headers.get('X-Pages', 1))
             followups = [
@@ -53,15 +55,21 @@ class Requester(LoggingBase):
             self.logger.debug('Response 304, no new data available.')
             return False, False
         
+        elif resp.status_code == 403:
+            self.logger.debug('Response 403, not authorized, no data returned.\nResponse: %s\n%s %s\nPath: %s\nQuery: %s',
+                resp.text, self.method, self.path, self.path_params, self.query_params
+            )
+            return False, False
+        
         elif resp.status_code == 404:
-            self.logger.info('Response 404, no data returned.\nResponse: %s\n%s %s\nPath: %s\nQuery: %s',
+            self.logger.debug('Response 404, not found, no data returned.\nResponse: %s\n%s %s\nPath: %s\nQuery: %s',
                 resp.text, self.method, self.path, self.path_params, self.query_params
             )
             return False, False
         
         elif resp.status_code == 420:
-            error_limit_time = float(resp.headers.get('X-ESI-Error-Limit-Remain'))
-            self.logger.info(
+            error_limit_time = float(resp.headers.get('X-ESI-Error-Limit-Reset'))
+            self.logger.debug(
                 'Response 420, waiting %s for error limit to resolve',
                 td(seconds=error_limit_time),
             )

@@ -1,10 +1,10 @@
 from nea_schema.maria.sde.map import Region
 from nea_schema.maria.esi import Etag
 
-from ...Base import Extractor
-from ....tools import maria_connect
+from ....Base import Extractor
+from .....tools import maria_connect
 
-class ExtractorMarketsOrders(Extractor):
+class ExtractorMarketsOrdersStations(Extractor):
     def _prime_requests(self):
         region_ids = self._get_region_ids()
         etags = self._get_etags(region_ids)

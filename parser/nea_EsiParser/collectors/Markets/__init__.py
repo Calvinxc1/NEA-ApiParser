@@ -1,3 +1,3 @@
 from .History import MarketsHistory
-from .Orders import MarketsOrders
+from .Orders import MarketsOrdersStations, MarketsOrdersStructures
 from .Prices import MarketsPrices

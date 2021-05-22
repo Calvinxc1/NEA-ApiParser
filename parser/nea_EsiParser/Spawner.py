@@ -8,7 +8,7 @@ from .tools import LimitedSession, LoggingBase
 from .collectors import \
     CorpAssets, CorpBlueprints, CorpIndustry, CorpOrders, \
     CorpOrdersHistory, CorpWalletJournal, CorpWalletTransactions, \
-    MarketsHistory, MarketsOrders, MarketsPrices, \
+    MarketsHistory, MarketsOrdersStations, MarketsOrdersStructures, MarketsPrices, \
     Status, \
     UniverseJumps, UniverseKills, UniverseStructures
 
@@ -17,7 +17,7 @@ class Spawner(LoggingBase):
         CorpAssets, CorpBlueprints, CorpIndustry, CorpOrders,
         CorpOrdersHistory, CorpWalletJournal, CorpWalletTransactions,
         
-        MarketsHistory, MarketsOrders, MarketsPrices,
+        MarketsHistory, MarketsOrdersStations, MarketsOrdersStructures, MarketsPrices,
         
         Status,
         

@@ -79,6 +79,7 @@ class Extractor(LoggingBase):
         return etag
         
     def _load_requests(self, requests):
+        self.requests = requests
         self.request_queue = Queue()
         for request in requests: self.request_queue.put(request)
         self.request_size = len(requests)
